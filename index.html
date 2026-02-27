@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>喜氣迎春✨ 台彩賓果賓果連碰計算與派彩模擬器</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <header>
+            <h1>🧧BINGO BINGO <span class="subtitle">發財計算機</span></h1>
+            <p>招財喜氣主題・手機版面優化</p>
+        </header>
+
+        <!-- Bonus Toggle Bar -->
+        <div class="bonus-toggle-bar glass-panel">
+            <label class="switch-container highlight-bonus">
+                <input type="checkbox" id="bonus-toggle">
+                <span class="slider round"></span>
+                <span class="label-text">🎉 啟動春節加碼獎金表</span>
+            </label>
+            <div id="bonus-indicator" class="bonus-indicator hidden">加碼進行中！各星等獎金大幅提升！</div>
+        </div>
+
+        <!-- 猜大小 / 猜單雙區塊 -->
+        <section class="panel extra-games-panel glass-panel">
+            <div class="panel-header">
+                <h2>額外玩法單注 (免連碰)</h2>
+            </div>
+            <div class="extra-games-container">
+                <div class="game-group">
+                    <label>猜大小 ($25/注)</label>
+                    <div class="btn-group" id="bs-group">
+                        <button class="btn btn-pill" data-type="bs" data-val="big">大</button>
+                        <button class="btn btn-pill" data-type="bs" data-val="small">小</button>
+                    </div>
+                </div>
+                <div class="game-group">
+                    <label>猜單雙 ($25/注)</label>
+                    <div class="btn-group" id="oe-group">
+                        <button class="btn btn-pill" data-type="oe" data-val="odd">單</button>
+                        <button class="btn btn-pill" data-type="oe" data-val="tie">和</button>
+                        <button class="btn btn-pill" data-type="oe" data-val="even">雙</button>
+                    </div>
+                </div>
+            </div>
+            <p class="extra-game-tip">※ 額外玩法不計入連碰組合，且不適用超級獎號。點擊按鈕代表買 1 注該結果，可點選多次。</p>
+            <div id="extra-games-summary" class="extra-games-summary">
+                已選：<span id="extra-games-list">無</span>
+            </div>
+        </section>
+
+        <main class="dashboard">
+            <!-- Left Panel: Number Grid -->
+            <section class="panel number-panel glass-panel">
+                <div class="panel-header">
+                    <h2>步驟 1：選擇號碼</h2>
+                    <div class="controls">
+                        <span id="selected-count" class="badge">已選: 0 / 20</span>
+                        <button id="btn-clear" class="btn btn-secondary">清除</button>
+                    </div>
+                </div>
+                <!-- Numbers 1-80 injected by JS -->
+                <div class="number-grid" id="number-grid"></div>
+            </section>
+
+            <!-- Right Panel: Settings and Results -->
+            <section class="panel settings-panel glass-panel">
+                <div class="settings-block">
+                    <h2>步驟 2：設定基本玩法</h2>
+                    
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label for="star-select">⭐ 選擇星數 (1-10星)</label>
+                            <select id="star-select" class="glass-select">
+                                <option value="1">1 星</option>
+                                <option value="2">2 星</option>
+                                <option value="3">3 星</option>
+                                <option value="4">4 星</option>
+                                <option value="5">5 星</option>
+                                <option value="6" selected>6 星</option>
+                                <option value="7">7 星</option>
+                                <option value="8">8 星</option>
+                                <option value="9">9 星</option>
+                                <option value="10">10 星</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="multiplier-select">💰 下注倍數</label>
+                            <select id="multiplier-select" class="glass-select">
+                                <option value="1" selected>1 倍</option>
+                                <option value="2">2 倍</option>
+                                <option value="3">3 倍</option>
+                                <option value="4">4 倍</option>
+                                <option value="5">5 倍</option>
+                                <option value="10">10 倍</option>
+                                <option value="20">20 倍</option>
+                                <option value="50">50 倍</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="period-select">📅 連續期數</label>
+                            <select id="period-select" class="glass-select">
+                                <option value="1" selected>1 期</option>
+                                <option value="2">2 期</option>
+                                <option value="3">3 期</option>
+                                <option value="4">4 期</option>
+                                <option value="5">5 期</option>
+                                <option value="6">6 期</option>
+                                <option value="7">7 期</option>
+                                <option value="8">8 期</option>
+                                <option value="9">9 期</option>
+                                <option value="10">10 期</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="toggle-group mt-1">
+                        <label class="switch-container">
+                            <input type="checkbox" id="super-num-toggle">
+                            <span class="slider round"></span>
+                            <span class="label-text">🔥 附加「超級獎號」 (每注翻倍為 $50)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="result-block">
+                    <h2>總計摘要</h2>
+                    <div class="summary-cards">
+                        <div class="card">
+                            <h3>連碰組合數 </h3>
+                            <div class="value highlight" id="total-combinations">0</div>
+                            <button id="btn-show-combinations" class="btn btn-pill mt-1" style="display: none; width: 100%;">查看所有組合明細</button>
+                        </div>
+                        <div class="card">
+                            <h3>總下注金額 (NT$)</h3>
+                            <div class="value warning" id="total-cost">0</div>
+                            <div class="cost-breakdown" id="cost-breakdown">基本: $0 | 額外: $0</div>
+                        </div>
+                    </div>
+                    <div class="error-msg" id="error-msg" style="display: none;">
+                        選擇的號碼數量必須大於或等於星數才能產生組合！
+                    </div>
+                </div>
+
+                <!-- Simulation Block -->
+                <div class="simulation-block" id="simulation-block">
+                    <div class="panel-header">
+                        <h2>步驟 3：派彩模擬器 🎯</h2>
+                    </div>
+                    <p class="sim-desc">假設在您的【連碰選號】中，中了幾個一般獎號？</p>
+                    
+                    <div class="input-group">
+                        <div class="hit-selector-wrapper">
+                            <input type="range" id="hit-count" min="0" max="0" value="0" class="glass-range">
+                            <span id="hit-count-display" class="large-number">0</span>
+                        </div>
+                    </div>
+
+                    <div class="toggle-group mt-1" id="super-hit-container" style="display: none;">
+                        <label class="switch-container highlight-gold">
+                            <input type="checkbox" id="super-hit-toggle">
+                            <span class="slider round"></span>
+                            <span class="label-text">⭐️ 並且【命中超級獎號】！</span>
+                        </label>
+                    </div>
+
+                    <div class="payout-summary">
+                        <h3>預估總獎金 (含倍數)</h3>
+                        <div class="value success" id="total-payout">NT$ 0</div>
+                    </div>
+
+                    <div class="payout-details" id="payout-details">
+                        <!-- Table injected by JS -->
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>※ 本程式計算機率與獎金僅供參考，實際遊戲規則及春節加碼規定依台灣彩券官方公告為準。</p>
+        </footer>
+    </div>
+
+    <!-- Modal for Combinations -->
+    <div id="combinations-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass-panel">
+            <div class="panel-header">
+                <h2>📝 您的連碰下注號碼明細</h2>
+                <button id="btn-close-modal" class="btn btn-secondary">關閉</button>
+            </div>
+            <div class="modal-body">
+                <p class="sim-desc" id="combo-modal-desc">以下是為您展開的所有組合，供您畫單下注參考：</p>
+                <div class="combo-list-container">
+                    <ol id="combo-list" class="combo-list"></ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 喜氣飄落動畫容器 -->
+    <div id="confetti-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
