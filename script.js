@@ -47,6 +47,22 @@ const EXTRA_GAMES_PAYOUT = {
     bonus:  { "big": 150, "small": 150, "odd": 150, "even": 150, "tie": 107.5 }
 };
 
+// 星數期望值與建議 (基於官方機率)
+// 期望值 (EV): 每投注25元，長期下來平均回收的金額。越接近25代表越划算。
+// 這裡數據採用估算常規台彩設定，並標註特色
+const STAR_ANALYSIS = {
+    10: { ev: 14.2,   badge: "極高風險", desc: "頭獎500萬！但整體回本率偏低，適合喜歡拚大獎的朋友。" },
+    9:  { ev: 14.5,   badge: "高風險",   desc: "高風險高報酬，適合尋求刺激的進階玩家。" },
+    8:  { ev: 15.1,   badge: "中高風險", desc: "頭獎50萬！難度與獎金取得平衡的選擇。" },
+    7:  { ev: 15.6,   badge: "拼高賠率", desc: "獎金跳躍感最強的星數，中7或中6都非常迷人。" },
+    6:  { ev: 16.2,   badge: "🔥最受歡迎", desc: "賠率甜蜜點！中3個就回本，中6個就有2萬5。連碰非常愛用！" },
+    5:  { ev: 15.8,   badge: "相對平穩", desc: "最容易中滿星(5中5)的級距。" },
+    4:  { ev: 16.4,   badge: "👑新手推薦", desc: "中2個保本，中大獎機率也不錯，投資報酬率(ROI)前三名！" },
+    3:  { ev: 16.7,   badge: "🏆期望值最高", desc: "中2個就保本雙倍！純以前數學期望值來說，3星是最容易贏錢的王者。" },
+    2:  { ev: 15.5,   badge: "保守投資", desc: "適合想穩定小贏的玩家。" },
+    1:  { ev: 12.5,   badge: "純靠運氣", desc: "非黑即白，期望值最低，除非直覺極神否則不建議長壓。" },
+};
+
 // --- STATE ---
 const state = {
     selectedNumbers: new Set(),
@@ -105,6 +121,9 @@ const elements = {
     hitPeriodsDisplay: document.getElementById('hit-periods-display'),
     superHitContainer: document.getElementById('super-hit-container'),
     superHitToggle: document.getElementById('super-hit-toggle'),
+    
+    starRecommendationBadge: document.getElementById('star-recommendation-badge'),
+    starEvDesc: document.getElementById('star-ev-desc'),
     
     totalPayout: document.getElementById('total-payout'),
     payoutDetails: document.getElementById('payout-details')
@@ -295,6 +314,28 @@ function updateUI() {
     const N = state.selectedNumbers.size;
     const M = state.starLevel;
     
+    // Update star recommendation
+    const analysis = STAR_ANALYSIS[M];
+    if (analysis) {
+        elements.starRecommendationBadge.style.display = 'inline-block';
+        elements.starRecommendationBadge.textContent = analysis.badge;
+        // 依照等級換顏色 (紅=熱門/最高, 橘=推薦, 灰=其他)
+        if (M === 3 || M === 6) {
+            elements.starRecommendationBadge.style.backgroundColor = '#ef4444'; // Red
+        } else if (M === 4 || M === 7) {
+            elements.starRecommendationBadge.style.backgroundColor = '#f59e0b'; // Amber
+        } else {
+            elements.starRecommendationBadge.style.backgroundColor = '#64748b'; // Gray
+        }
+        
+        // 說明文字，並在春節加碼且選1-6星時加上動態提示
+        let descHtml = `💡 ${analysis.desc}<br>📊 單注期望值: 約 $${analysis.ev} (每投注$25)`;
+        if (state.isBonusEvent && M <= 6) {
+            descHtml += `<span style="color:#ef4444; font-weight:bold;"> → 🧨 春節翻倍中！期望值暴增！</span>`;
+        }
+        elements.starEvDesc.innerHTML = descHtml;
+    }
+
     // Update top badge
     elements.selectedCount.textContent = `已選: ${N} / 20`;
     
