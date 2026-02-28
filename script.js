@@ -29,22 +29,22 @@ const PRIZE_SUPER = {
 
 // 春節加碼版獎金表 (模擬加碼提升)
 const BONUS_PRIZE_NORMAL = JSON.parse(JSON.stringify(PRIZE_NORMAL));
-// Example bonus logic: 1~3星獎金提升
-BONUS_PRIZE_NORMAL[1][1] = 60; 
-BONUS_PRIZE_NORMAL[2][2] = 100; BONUS_PRIZE_NORMAL[2][1] = 30;
-BONUS_PRIZE_NORMAL[3][3] = 650; BONUS_PRIZE_NORMAL[3][2] = 65;
-BONUS_PRIZE_NORMAL[6][6] = 30000; // 6星大躍進
+// 春節加碼：1~6星基本玩法獎金倍數全面翻倍
+for (let i = 1; i <= 6; i++) {
+    for (let hits in BONUS_PRIZE_NORMAL[i]) {
+        if (BONUS_PRIZE_NORMAL[i][hits] > 0) {
+            BONUS_PRIZE_NORMAL[i][hits] *= 2;
+        }
+    }
+}
 
+// 超級獎號、大小單雙於春節期間不加碼，維持原賠率
 const BONUS_PRIZE_SUPER = JSON.parse(JSON.stringify(PRIZE_SUPER));
-BONUS_PRIZE_SUPER[1][1] = 200;
-BONUS_PRIZE_SUPER[2][2] = 250;
-BONUS_PRIZE_SUPER[3][3] = 1625;
-BONUS_PRIZE_SUPER[6][6] = 75000;
 
 // Size/OddEven Payouts (Normal / Bonus)
 const EXTRA_GAMES_PAYOUT = {
     normal: { "big": 150, "small": 150, "odd": 150, "even": 150, "tie": 107.5 },
-    bonus:  { "big": 175, "small": 175, "odd": 175, "even": 175, "tie": 125 }
+    bonus:  { "big": 150, "small": 150, "odd": 150, "even": 150, "tie": 107.5 }
 };
 
 // --- STATE ---
@@ -65,6 +65,7 @@ const state = {
     totalCost: 0,
     
     hitCount: 0,
+    hitPeriodsCount: 1, // 模擬器：在這 N 期中，總共中了幾期
     isSuperHit: false   // 模擬器: 是否包含命中超級號碼
 };
 
@@ -98,6 +99,10 @@ const elements = {
     simulationBlock: document.getElementById('simulation-block'),
     hitCountRange: document.getElementById('hit-count'),
     hitCountDisplay: document.getElementById('hit-count-display'),
+    hitPeriodsGroup: document.getElementById('hit-periods-group'),
+    hitPeriodsDesc: document.getElementById('hit-periods-desc'),
+    hitPeriodsRange: document.getElementById('hit-periods-count'),
+    hitPeriodsDisplay: document.getElementById('hit-periods-display'),
     superHitContainer: document.getElementById('super-hit-container'),
     superHitToggle: document.getElementById('super-hit-toggle'),
     
@@ -237,6 +242,12 @@ function setupEventListeners() {
         elements.hitCountDisplay.textContent = state.hitCount;
         calculatePayout();
     });
+
+    elements.hitPeriodsRange.addEventListener('input', (e) => {
+        state.hitPeriodsCount = parseInt(e.target.value);
+        elements.hitPeriodsDisplay.textContent = state.hitPeriodsCount + " 期";
+        calculatePayout();
+    });
     
     elements.superHitToggle.addEventListener('change', (e) => {
         state.isSuperHit = e.target.checked;
@@ -311,6 +322,24 @@ function updateUI() {
         elements.hitCountRange.value = N;
     }
     elements.hitCountDisplay.textContent = state.hitCount;
+
+    // Update Periods Simulation
+    if (state.periodCount > 1) {
+        elements.hitPeriodsDesc.style.display = 'block';
+        elements.hitPeriodsGroup.style.display = 'flex';
+        elements.hitPeriodsRange.max = state.periodCount;
+        if (state.hitPeriodsCount > state.periodCount) {
+            state.hitPeriodsCount = state.periodCount;
+        }
+        elements.hitPeriodsRange.value = state.hitPeriodsCount;
+        elements.hitPeriodsDisplay.textContent = state.hitPeriodsCount + " 期";
+    } else {
+        elements.hitPeriodsDesc.style.display = 'none';
+        elements.hitPeriodsGroup.style.display = 'none';
+        state.hitPeriodsCount = 1;
+        elements.hitPeriodsRange.value = 1;
+        elements.hitPeriodsDisplay.textContent = "1 期";
+    }
     
     // Check Validity for base game
     if (N > 0 && N < M) {
@@ -366,7 +395,8 @@ function calculatePayout() {
     const K = state.hitCount;
     const isSuperHit = state.isSuperHit; // Only true if super num toggled AND super hit toggled
     
-    let totalPrizeMoney = 0;
+    // totalPrizeMoney 將代表: "這些期數內，我所勾選的命中情況出現了 hitPeriodsCount 次" 的總獎金
+    let totalPrizeMoney = 0; 
     let tableHTML = `
         <table class="payout-table">
             <thead>
@@ -374,7 +404,7 @@ function calculatePayout() {
                     <th>命中情境</th>
                     <th>命中注數</th>
                     <th>單注獎金</th>
-                    <th>小計金額 (含倍數)</th>
+                    <th>總獎金 (已乘期數)</th>
                 </tr>
             </thead>
             <tbody>
@@ -394,54 +424,50 @@ function calculatePayout() {
 
         const prizeLevel = activeTable[M];
         
-        // 算出 N 個中，有 K 個是獎號。如果要精算「其中包含 1 個超級獎號」的機率分佈會非常複雜。
-        // 為直覺模擬，我們給定的條件是：若您勾選「包含超級獎號」，我們直接將該情境下的單注獎金套用該超級表。（即假設中獎組合都沾到超獎的光，或純體驗派彩額外威力）。
-        // 超幾何分佈 C(命中數, 中幾號) * C(不中數, 星數-中幾號)
         for (let j = M; j >= 0; j--) {
             const hitCombinations = combinations(K, j) * combinations(N - K, M - j);
             
             if (hitCombinations > 0 && prizeLevel[j] !== undefined) {
                 hasAnyWinner = true;
                 const singlePrize = prizeLevel[j];
-                // 獎金 = (注數 * 該獎級表原基底額 * 下注倍數) x 期數
-                // 注意：派彩模擬為「如果在這 N 期中都中了同樣的狀況」的預估理論獎金。
-                const rowTotal = hitCombinations * singlePrize * state.multiplier * state.periodCount; 
-                totalPrizeMoney += rowTotal;
+                // 獎金 = (注數 * 該獎級表原基底額 * 下注倍數) [此處先算"單期"獎金]
+                const rowSinglePeriodTotal = hitCombinations * singlePrize * state.multiplier; 
+                const totalForTargetPeriods = rowSinglePeriodTotal * state.hitPeriodsCount;
+                totalPrizeMoney += totalForTargetPeriods;
                 
                 tableHTML += `
                     <tr class="${singlePrize > state.baseCost ? 'row-highlight' : ''}">
                         <td>連碰中 ${j} 號</td>
-                        <td>${formatMoney(hitCombinations)} 注 x ${state.periodCount}期</td>
+                        <td>${formatMoney(hitCombinations)} 注 x ${state.hitPeriodsCount}期</td>
                         <td>$${formatMoney(singlePrize)}</td>
-                        <td>$${formatMoney(rowTotal)}</td>
+                        <td>$${formatMoney(totalForTargetPeriods)}</td>
                     </tr>
                 `;
             }
         }
     }
     
-    // 2. Calculate Extra Games Payout (Assuming the user guessed CORRECTLY for all clicked extra games for simulation!)
+    // 2. Calculate Extra Games Payout
     if (state.extraGames.length > 0) {
         hasAnyWinner = true;
         const extraTable = state.isBonusEvent ? EXTRA_GAMES_PAYOUT.bonus : EXTRA_GAMES_PAYOUT.normal;
         
-        // Aggregate
         const counts = {};
         state.extraGames.forEach(g => { counts[g.val] = (counts[g.val] || 0) + 1; });
         
         Object.entries(counts).forEach(([val, count]) => {
             const singlePrize = extraTable[val] || 150;
-            // 單注總倍數 = 次數 * 下注倍數 * 期數
-            const singleTotalMultiplier = count * state.multiplier * state.periodCount; 
-            const rowTotal = singleTotalMultiplier * singlePrize;
-            totalPrizeMoney += rowTotal;
+            const singleTotalMultiplier = count * state.multiplier; 
+            const rowSinglePeriodTotal = singleTotalMultiplier * singlePrize;
+            const totalForTargetPeriods = rowSinglePeriodTotal * state.hitPeriodsCount;
+            totalPrizeMoney += totalForTargetPeriods;
             
             tableHTML += `
                 <tr>
                     <td>猜中 ${transExtraName(val)} (全對模擬)</td>
-                    <td>${singleTotalMultiplier} 單位 (含期數)</td>
+                    <td>${singleTotalMultiplier} 單位 x ${state.hitPeriodsCount}期</td>
                     <td>$${formatMoney(singlePrize)}</td>
-                    <td>$${formatMoney(rowTotal)}</td>
+                    <td>$${formatMoney(totalForTargetPeriods)}</td>
                 </tr>
             `;
         });
@@ -462,7 +488,9 @@ function calculatePayout() {
         elements.totalPayout.className = 'value';
     }
 
-    elements.totalPayout.textContent = `NT$ ${formatMoney(totalPrizeMoney)}`;
+    elements.totalPayout.innerHTML = `
+        <div style="font-size: 0.9em;">合計中 ${state.hitPeriodsCount} 期: NT$ ${formatMoney(totalPrizeMoney)}</div>
+    `;
     elements.payoutDetails.innerHTML = tableHTML;
 }
 
