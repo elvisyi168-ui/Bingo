@@ -124,6 +124,7 @@ const elements = {
     
     starRecommendationBadge: document.getElementById('star-recommendation-badge'),
     starEvDesc: document.getElementById('star-ev-desc'),
+    roiBarsContainer: document.getElementById('roi-bars'),
     
     totalPayout: document.getElementById('total-payout'),
     payoutDetails: document.getElementById('payout-details')
@@ -208,14 +209,40 @@ function handleExtraGameClick(btn) {
     // Add to extra games array
     state.extraGames.push({ type, val, baseCost: 25 });
     
+    // Create ripple effect
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    ripple.style.position = 'absolute';
+    ripple.style.borderRadius = '50%';
+    ripple.style.transform = 'scale(0)';
+    ripple.style.animation = 'ripple 600ms linear';
+    ripple.style.backgroundColor = 'rgba(212, 175, 55, 0.4)';
+    btn.appendChild(ripple);
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+    
     // Add visual bounce
-    btn.style.transform = 'scale(1.2)';
+    btn.style.transform = 'scale(1.1)';
     setTimeout(() => btn.style.transform = '', 150);
     
     updateUI();
 }
 
 function setupEventListeners() {
+    // Add ripple animation to CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
     elements.btnClear.addEventListener('click', () => {
         state.selectedNumbers.clear();
         state.extraGames = [];
@@ -321,19 +348,51 @@ function updateUI() {
         elements.starRecommendationBadge.textContent = analysis.badge;
         // 依照等級換顏色 (紅=熱門/最高, 橘=推薦, 灰=其他)
         if (M === 3 || M === 6) {
-            elements.starRecommendationBadge.style.backgroundColor = '#ef4444'; // Red
+            elements.starRecommendationBadge.style.backgroundColor = 'var(--danger-color)'; // Red
         } else if (M === 4 || M === 7) {
-            elements.starRecommendationBadge.style.backgroundColor = '#f59e0b'; // Amber
+            elements.starRecommendationBadge.style.backgroundColor = 'var(--primary-hover)'; // Darker Gold for contrast
         } else {
-            elements.starRecommendationBadge.style.backgroundColor = '#64748b'; // Gray
+            elements.starRecommendationBadge.style.backgroundColor = '#7f8c8d'; // Dark Grey for contrast with white text
         }
         
         // 說明文字，並在春節加碼且選1-6星時加上動態提示
         let descHtml = `💡 ${analysis.desc}<br>📊 單注期望值: 約 $${analysis.ev} (每投注$25)`;
         if (state.isBonusEvent && M <= 6) {
-            descHtml += `<span style="color:#ef4444; font-weight:bold;"> → 🧨 春節翻倍中！期望值暴增！</span>`;
+            descHtml += `<br><span style="color:var(--danger-color); font-weight:bold;">✨ 🧨 春節翻倍中！期望值暴増！</span>`;
         }
         elements.starEvDesc.innerHTML = descHtml;
+    }
+
+    // Build ROI Visualizer Bars
+    elements.roiBarsContainer.innerHTML = '';
+    const maxEv = 17; // Roughly max expected value to base heights on
+    for (let i = 1; i <= 10; i++) {
+        const starData = STAR_ANALYSIS[i];
+        const col = document.createElement('div');
+        col.className = 'roi-bar-col' + (i === M ? ' active' : '');
+        col.addEventListener('click', () => {
+            elements.starSelect.value = i;
+            state.starLevel = i;
+            updateUI();
+        });
+
+        const bar = document.createElement('div');
+        bar.className = 'roi-bar';
+        let barEv = starData.ev;
+        // Simple height percent calc mapped visually (making differences noticeable)
+        let heightPct = ((barEv - 10) / (maxEv - 10)) * 100;
+        if(heightPct < 10) heightPct = 10;
+
+        bar.style.height = `${heightPct}%`;
+        bar.dataset.tooltip = `${i}星: $${barEv}`;
+        
+        const label = document.createElement('div');
+        label.className = 'roi-bar-label';
+        label.textContent = `${i}星`;
+
+        col.appendChild(bar);
+        col.appendChild(label);
+        elements.roiBarsContainer.appendChild(col);
     }
 
     // Update top badge
